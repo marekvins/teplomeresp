@@ -1,0 +1,176 @@
+#include <Wire.h>
+
+#include <LiquidCrystal_I2C.h>
+
+#include <OneWire.h>
+
+#include <DallasTemperature.h>
+
+#include <WiFi.h>
+
+#include <WebServer.h>
+ 
+// WiFi AP
+
+char ap_ssid[] = "Teplomer-ESP32";
+
+char ap_pass[] = "12345678";
+ 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+OneWire oneWire(4);
+
+DallasTemperature ds(&oneWire);
+
+WebServer server(80);
+ 
+float teplota = 0;
+ 
+byte stupen[8] = {
+
+  B00110,
+
+  B01001,
+
+  B01001,
+
+  B00110,
+
+  B00000,
+
+  B00000,
+
+  B00000,
+
+  B00000
+
+};
+ 
+void setup() {
+
+  Serial.begin(115200);
+ 
+  Wire.begin(21, 22);
+
+  lcd.init();
+
+  lcd.createChar(0, stupen);
+
+  lcd.backlight();
+
+  ds.begin();
+ 
+  // 🔥 DŮLEŽITÉ – nastav režim AP
+
+  WiFi.mode(WIFI_AP);
+ 
+  // spuštění AP
+
+  bool ok = WiFi.softAP(ap_ssid, ap_pass);
+ 
+  Serial.println("Start AP:");
+
+  Serial.println(ok ? "OK" : "CHYBA");
+
+  Serial.print("IP adresa: ");
+
+  Serial.println(WiFi.softAPIP());
+ 
+  lcd.clear();
+
+  lcd.setCursor(0, 0);
+
+  lcd.print("WiFi:");
+
+  lcd.setCursor(0, 1);
+
+  lcd.print(ap_ssid);
+ 
+  delay(5000);
+ 
+  lcd.clear();
+
+  lcd.setCursor(0, 0);
+
+  lcd.print(WiFi.softAPIP());
+ 
+  delay(5000);
+ 
+  // Web server
+
+  server.on("/", []() {
+
+    String html = "<!DOCTYPE html><html><head>"
+
+      "<meta charset='UTF-8'>"
+
+      "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+
+      "<meta http-equiv='refresh' content='2'>"
+
+      "<title>Teplomer</title>"
+
+      "<style>"
+
+      "body{background:#111;color:#0f0;font-family:monospace;"
+
+      "display:flex;flex-direction:column;align-items:center;"
+
+      "justify-content:center;height:100vh;margin:0}"
+
+      "p{opacity:.5;font-size:.9rem}"
+
+      "#t{font-size:5rem;font-weight:bold}"
+
+      "</style></head><body>"
+
+      "<p>ESP32 TEPLOMER</p>"
+
+      "<div id='t'>" + String(teplota, 1) + "&deg;C</div>"
+
+      "</body></html>";
+ 
+    server.send(200, "text/html", html);
+
+  });
+ 
+  server.begin();
+
+}
+ 
+void loop() {
+
+  server.handleClient();
+ 
+  static unsigned long cas = 0;
+ 
+  if (millis() - cas > 2000) {
+
+    cas = millis();
+ 
+    ds.requestTemperatures();
+
+    teplota = ds.getTempCByIndex(0);
+ 
+    Serial.print("Teplota: ");
+
+    Serial.println(teplota);
+ 
+    lcd.clear();
+
+    lcd.setCursor(0, 0);
+
+    lcd.print("Teplota:");
+
+    lcd.setCursor(0, 1);
+
+    lcd.print(teplota);
+
+    lcd.write(0);
+
+    lcd.print("C");
+
+  }
+
+}
+ 
