@@ -1,0 +1,9 @@
+DS18B20 teplotní senzor (OneWire)
+DATA → GPIO 4
+VCC → 3.3V
+GND → GND
+LCD displej I2C (16x2, adresa 0x27)
+SDA → GPIO 21
+SCL → GPIO 22
+VCC → 5V (většinou funguje i na 3.3V, ale doporučeno 5V)
+GND → GND
